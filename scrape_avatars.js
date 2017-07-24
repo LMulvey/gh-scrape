@@ -8,10 +8,11 @@ const request = require('request'),
 // ## Define constant variables.
 const scrapeUser = (!process.argv[2]) ? "LMulvey" : process.argv[2],
     scrapeRepo = (!process.argv[3]) ? "frotos" : process.argv[3],
-    USER_AGENT={ 'User-Agent': process.env.USER_AGENT_CONFIG }
+    USER_AGENT = { 'User-Agent': process.env.USER_AGENT_CONFIG },
+    API_ROOT = "@api.github.com/repos/";
 
 // ## Log an intro to the user so they know that the application is running.
-console.log('Welcome to GH Scrape.\n -> Let\'s scrape some avatars!');
+console.log("Welcome to GH Scrape.\n -> Let's scrape some avatars!");
 
 function getRepoContributors(repoOwner, repoName, cb) {
 // ## getRepoContributors takes a repoOwner and repoName as arguments.
@@ -20,11 +21,8 @@ function getRepoContributors(repoOwner, repoName, cb) {
 // ### -> Requests the JSON data from api.github.com.
 // ###    If err, kill. If succeed, callback with parsed JSON data.
 
-    const request_url = "https://"
-     + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + 
-    "@api.github.com/repos/" 
-    + repoOwner + "/" + repoName + 
-    "/contributors";
+    const request_url = "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
+    + repoOwner + "/" + repoName + "/contributors";
 
     request.get({ url: request_url, headers: USER_AGENT },
      (err, res, body) => {
@@ -57,14 +55,14 @@ function downloadImageByURL(url, filePath) {
 }
 
 // ## Call getRepoContributors with provided args (assigned to vars at top).
-// ### -> For each key:val pair returned, run downloadImageByURL
-getRepoContributors(scrapeUser, scrapeRepo, (err, res, body) => { 
-    console.log("Errors: " + err +
-    "\nResult: ");
-    console.log('*********** STARTING DOWNLOAD OF ' + body.length + ' FILES... *************');
-    for (let key in body) {
-        downloadImageByURL(body[key]['avatar_url'], './avatars/' 
-        + body[key]['login'] + '.jpg');
-    };
+// ### -> forEach key:val pair returned in scrape, run downloadImageByURL
+getRepoContributors(scrapeUser, scrapeRepo, (err, res, scrape) => { 
+    if(err) return console.log('Error occurred!');
+    console.log('*********** STARTING DOWNLOAD OF ' + scrape.length + ' FILES... *************');
+    
+    scrape.forEach((item) => {
+        downloadImageByURL(item['avatar_url'], './avatars/' + item['login'] + '.jpg');
+    });
+    
 });
 
