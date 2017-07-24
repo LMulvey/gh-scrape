@@ -14,6 +14,18 @@ const scrapeUser = (!process.argv[2]) ? "LMulvey" : process.argv[2],
 // ## Log an intro to the user so they know that the application is running.
 console.log("Welcome to GH Scrape.\n -> Let's scrape some avatars!");
 
+// ## Call getRepoContributors with provided args (assigned to vars at top).
+// ### -> forEach key:val pair returned in scrape, run downloadImageByURL
+getRepoContributors(scrapeUser, scrapeRepo, (err, res, scrape) => { 
+    if(err) return console.log('Error occurred!');
+    console.log('*********** STARTING DOWNLOAD OF ' + scrape.length + ' FILES... *************');
+    
+    scrape.forEach((item) => {
+        downloadImageByURL(item['avatar_url'], './avatars/' + item['login'] + '.jpg');
+    });  
+});
+
+// ## Let's define our functions.
 function getRepoContributors(repoOwner, repoName, cb) {
 // ## getRepoContributors takes a repoOwner and repoName as arguments.
 // ### -> Constructs a request_url to grab avatars from based on the supplied
@@ -50,19 +62,5 @@ function downloadImageByURL(url, filePath) {
     .on('end',  () => { 
         console.log('Download completed.');
     })
-    .pipe(fs.createWriteStream(filePath));
-   
+    .pipe(fs.createWriteStream(filePath)); 
 }
-
-// ## Call getRepoContributors with provided args (assigned to vars at top).
-// ### -> forEach key:val pair returned in scrape, run downloadImageByURL
-getRepoContributors(scrapeUser, scrapeRepo, (err, res, scrape) => { 
-    if(err) return console.log('Error occurred!');
-    console.log('*********** STARTING DOWNLOAD OF ' + scrape.length + ' FILES... *************');
-    
-    scrape.forEach((item) => {
-        downloadImageByURL(item['avatar_url'], './avatars/' + item['login'] + '.jpg');
-    });
-    
-});
-
