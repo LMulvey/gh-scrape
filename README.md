@@ -10,7 +10,7 @@ Just run:
 And you're all set!
 
 By default, avatars will download to:
->./avatars/<username>.jpg
+>./avatars/[username].jpg
 
 ##### Any questions?
 ###### _They can be forwarded to null@127.0.0.1:8080_
