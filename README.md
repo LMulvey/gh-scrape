@@ -1,5 +1,5 @@
 # GH-Scrape
-### *Scrape GitHub Conributor's Avatars*
+### *Scrape GitHub Contributor's Avatars*
 ----------------
 * Provide a **GitHub Username** and a **Repo Name** associated to that user.
 * You can then scrape and download all the contributor's avatars to a local folder, sorted by username. 
