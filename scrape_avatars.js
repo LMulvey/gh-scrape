@@ -6,7 +6,7 @@ const request = require('request'),
 // * Define constants //
 const scrapeUser = (!process.argv[2]) ? "LMulvey" : process.argv[2],
     scrapeRepo = (!process.argv[3]) ? "frotos" : process.argv[3],
-    USER_AGENT={ 'User-Agent': 'LMulvey' }
+    USER_AGENT={ 'User-Agent': process.env.USER_AGENT_CONFIG }
 
 //Intro
 console.log('Welcome to GH Scrape.\n -> Let\'s scrape some avatars!');
