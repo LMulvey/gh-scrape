@@ -1,19 +1,19 @@
+require('dotenv').config();
+
 const request = require('request'),
         fs = require('fs');
 
 // * Define constants //
-const GITHUB_USER = "LMulvey",
-    GITHUB_TOKEN = "58feac3c8a547b9cc4d423805605e1c87804ddb8",
-    USER_AGENT = { 'User-Agent': 'LMulvey' },
-    scrapeUser = (!process.argv[2]) ? "LMulvey" : process.argv[2],
-    scrapeRepo = (!process.argv[3]) ? "frotos" : process.argv[3];
+const scrapeUser = (!process.argv[2]) ? "LMulvey" : process.argv[2],
+    scrapeRepo = (!process.argv[3]) ? "frotos" : process.argv[3],
+    USER_AGENT={ 'User-Agent': 'LMulvey' }
 
 //Intro
 console.log('Welcome to GH Scrape.\n -> Let\'s scrape some avatars!');
 
 function getRepoContributors(repoOwner, repoName, cb) {
     const request_url = "https://"
-     + GITHUB_USER + ":" + GITHUB_TOKEN + 
+     + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + 
     "@api.github.com/repos/" 
     + repoOwner + "/" + repoName + 
     "/contributors";
