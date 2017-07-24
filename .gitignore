@@ -1,6 +1,7 @@
 # Project-specific ignores #
 ############################
 .env
+./node_modules
 
 
 # Compiled source #
