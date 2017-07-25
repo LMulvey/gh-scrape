@@ -72,9 +72,12 @@ function getRepoRecommendations(repoOwner, repoName, cb) {
 function getContributorStarredURLs(contributors, cb) {  
     let starredStack = [];
     let processed = 0;
+
     console.log('getting star URLs');
     contributors.forEach((contributor) => {
        
+        processed++;
+
         console.log('in the for each - ' + contributor['login']);
         request.get( {
              url: "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
@@ -82,16 +85,15 @@ function getContributorStarredURLs(contributors, cb) {
             (err, res, body) => {
                 if(err) cb({ error: 'invalid_starred_url', message: 'Unable to request from Starred URL.'});
                 else { 
-                    let info = JSON.parse(body);
-                    console.log(info['full_name']);
-                    starredStack.push( { "stars" : info['stargazers_count'], "full_name" : info['full_name'] });
+                    let pull = JSON.parse(body);
+                    pull.forEach((info) => {
+                        starredStack.push( { 'stars' : info['stargazers_count'], 'full_name' : info['full_name'] });
+                    });
                 }
         });
-        processed++;
-
+        console.log(starredStack);
+        console.log(processed);
         if(processed === contributors.length) {
-            console.log('finished starred stack.');
-            console.log(starredStack);
             cb(null, starredStack);
         }
     });
