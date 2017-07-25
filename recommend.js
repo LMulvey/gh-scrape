@@ -20,6 +20,9 @@ const scrapeUser = process.argv[2],
     USER_AGENT = { 'User-Agent': process.env.USER_AGENT_CONFIG },
     API_ROOT = "@api.github.com";
 
+let i = 0; 
+
+
 // ## Log an intro to the user so they know that the application is running.
 // ### -> Give the user the instructions they need if they didn't enter any args.
 // ### -> Do not assign default args anymore. Instead, print out instructions and end.
@@ -41,60 +44,56 @@ if(!scrapeUser || !scrapeRepo) { return console.log(
 // ## Call getRepoRecommendations with provided args (assigned to vars at top).
 // ### -> forEach key:val pair returned in scrape, run downloadImageByURL
 getRepoRecommendations(scrapeUser, scrapeRepo, (err, scrape) => { 
-    if(err) return console.log('Error occurred!\nError: ' + err.error + ' - ' + err.message);
-    
-    scrape.forEach((item) => {
-        console.log("[" + item['stars'] + "] " + item['full_name']);
-    })
+    if(err) return console.log('Error occurred!\nError: ' + err.error + ' - ' + err.message); 
+    let stars = sortByKey(scrape);
+    for(i = 0; i < 5; i++) console.log("#" + (i+1) + " [ " + stars[i] + " stars ] " + scrape[stars[i]]);
 });
 
 // ## Let's define our functions.
 function getRepoRecommendations(repoOwner, repoName, cb) {
-// ## getRepoContributors takes a repoOwner and repoName as arguments.
-// ### -> Constructs a request_url to grab avatars from based on the supplied
-// ###    username (repoOwner) and repo (repoName).
-// ### -> Requests the JSON data from api.github.com.
-// ###    If err, kill. If succeed, callback with parsed JSON data.
-
+// ## getRepoRecommendations takes a repoOwner and repoName as arguments.
     const request_url = "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
     + '/repos/' + repoOwner + "/" + repoName + "/contributors";
 
     request.get({ url: request_url, headers: USER_AGENT },
         (err, res, body) => {
             if(err) cb({ error: 'invalid_url', message: 'Unable to request from API URL.'});
+            if(body.length <= 1) cb({ error: 'too_few_contributors', 
+                                      message: 'Sorry! Repo must have more than one contributors.'})
             else getContributorStarredURLs(JSON.parse(body), (err, stack) => {
-              if(err) cb({ error: 'starred_stack_crash', message: 'Error grabbing Stargazers stack.'});
+              if(err) cb({ error: err.error, message: err.message});
               else cb(null, stack);  
         });
     });
 }
 
-function getContributorStarredURLs(contributors, cb) {  
-    let starredStack = [];
+function getContributorStarredURLs(contributors, cb) { 
     let processed = 0;
-
-    console.log('getting star URLs');
+    let starredStack = {};
     contributors.forEach((contributor) => {
-       
-        processed++;
-
-        console.log('in the for each - ' + contributor['login']);
         request.get( {
              url: "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
              + '/users/' + contributor['login'] + "/starred", headers: USER_AGENT },
             (err, res, body) => {
                 if(err) cb({ error: 'invalid_starred_url', message: 'Unable to request from Starred URL.'});
+                else if(body.length < 5) cb({ error: 'too_few_starred_repos', 
+                                      message: 'Sorry! There are too few starred repos to analyze!'})
                 else { 
                     let pull = JSON.parse(body);
                     pull.forEach((info) => {
-                        starredStack.push( { 'stars' : info['stargazers_count'], 'full_name' : info['full_name'] });
+                        let key_name =  info['stargazers_count'];
+                        starredStack[key_name] = info['full_name'];
                     });
                 }
+            processed++;
+            if(processed === contributors.length-1) {
+                cb(null, starredStack);
+            }
         });
-        console.log(starredStack);
-        console.log(processed);
-        if(processed === contributors.length) {
-            cb(null, starredStack);
-        }
     });
+}
+
+function sortByKey(obj) {
+    let keys = Object.keys(obj);
+    return keys.sort((a,b) => { return b-a; }); // Returns a descending list
 }
