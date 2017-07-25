@@ -18,41 +18,38 @@ const request = require('request'),
 const scrapeUser = process.argv[2],
     scrapeRepo = process.argv[3],
     USER_AGENT = { 'User-Agent': process.env.USER_AGENT_CONFIG },
-    API_ROOT = "@api.github.com/repos/";
+    API_ROOT = "@api.github.com";
 
 // ## Log an intro to the user so they know that the application is running.
 // ### -> Give the user the instructions they need if they didn't enter any args.
 // ### -> Do not assign default args anymore. Instead, print out instructions and end.
 console.log("####################################\n" + 
-            "GH SCRAPE - GitHub Avatar Scrape\n" +
+            "GH RECOMMEND - GitHub Repo Recommend\n" +
             "####################################\n" +
-            "Download Contributor Avatars from Any Repo!\n" +
+            "Recommend five repos based on one you submit!!\n" +
             "####################################"
 );
 if(!scrapeUser || !scrapeRepo) { return console.log(
     "#################################################################################################\n" +
-    "This script can be used to scrape and download avatars of all contributors from any GitHub repo.\n" + 
+    "This script can be used to recommend five repos based on one you submit.\n" + 
     "To use, run script with two args: <GitHub Username> <GitHub Repo (belonging to user)>\n" + 
-    "If you're using Node, simply type: node scrape_avatars <username> <repo> and you're all set.\n" +
+    "If you're using Node, simply type: node recommend.js <username> <repo> and you're all set.\n" +
     "Good luck! -- lm\n" +
     "#################################################################################################"
-); } else { console.log('Scraping Avatars from REPO: ' + scrapeRepo + ' by ' + scrapeUser); }
+); } else { console.log('Grabbing your recommendations based off of REPO: ' + scrapeRepo + ' by ' + scrapeUser); }
 
-// ## Call getRepoContributors with provided args (assigned to vars at top).
+// ## Call getRepoRecommendations with provided args (assigned to vars at top).
 // ### -> forEach key:val pair returned in scrape, run downloadImageByURL
-getRepoContributors(scrapeUser, scrapeRepo, (err, res, scrape) => { 
+getRepoRecommendations(scrapeUser, scrapeRepo, (err, scrape) => { 
     if(err) return console.log('Error occurred!\nError: ' + err.error + ' - ' + err.message);
-    console.log('*********** STARTING DOWNLOAD OF ' + scrape.length + ' FILES... *************');
     
     scrape.forEach((item) => {
-        downloadImageByURL(item['avatar_url'], './avatars/' + item['login'] + '.jpg', (err) => {
-           if(err) return console.log('Error occurred!\nError: ' + err.error + ' - ' + err.message);
-        });
-    });  
+        console.log("[" + item['stars'] + "] " + item['full_name']);
+    })
 });
 
 // ## Let's define our functions.
-function getRepoContributors(repoOwner, repoName, cb) {
+function getRepoRecommendations(repoOwner, repoName, cb) {
 // ## getRepoContributors takes a repoOwner and repoName as arguments.
 // ### -> Constructs a request_url to grab avatars from based on the supplied
 // ###    username (repoOwner) and repo (repoName).
@@ -60,35 +57,42 @@ function getRepoContributors(repoOwner, repoName, cb) {
 // ###    If err, kill. If succeed, callback with parsed JSON data.
 
     const request_url = "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
-    + repoOwner + "/" + repoName + "/contributors";
+    + '/repos/' + repoOwner + "/" + repoName + "/contributors";
 
     request.get({ url: request_url, headers: USER_AGENT },
-     (err, res, body) => {
-        if(err) cb({ error: 'invalid_url', message: 'Unable to request from API URL.'});
-        else cb(null, res, JSON.parse(body));
+        (err, res, body) => {
+            if(err) cb({ error: 'invalid_url', message: 'Unable to request from API URL.'});
+            else getContributorStarredURLs(JSON.parse(body), (err, stack) => {
+              if(err) cb({ error: 'starred_stack_crash', message: 'Error grabbing Stargazers stack.'});
+              else cb(null, stack);  
+        });
     });
 }
 
-function downloadImageByURL(url, filePath, cb) {
-// ## downloadImageByURL takes a URL and a local filepath as arguments.
-// ### -> Requests JSON data from URL passed in arguments.
-// ### -> Upon success, start fs writeStream to write file to filePath.
-// ### -> .on 'end', write to console. * Note: 'end' is normally covered by .pipe()
-// ###    However, since I wanted a special action during the 'end' action, it can
-// ###    be added in this fashion. 
+function getContributorStarredURLs(contributors, cb) {  
+    let starredStack = [];
+    let processed = 0;
+    console.log('getting star URLs');
+    contributors.forEach((contributor) => {
+       
+        console.log('in the for each - ' + contributor['login']);
+        request.get( {
+             url: "https://" + process.env.GITHUB_USER + ":" + process.env.GITHUB_TOKEN + API_ROOT
+             + '/users/' + contributor['login'] + "/starred", headers: USER_AGENT },
+            (err, res, body) => {
+                if(err) cb({ error: 'invalid_starred_url', message: 'Unable to request from Starred URL.'});
+                else { 
+                    let info = JSON.parse(body);
+                    console.log(info['full_name']);
+                    starredStack.push( { "stars" : info['stargazers_count'], "full_name" : info['full_name'] });
+                }
+        });
+        processed++;
 
-    request.get({ url: url, headers: USER_AGENT })
-    .on('err', (err) => {
-        cb({ error: 'invalid_avatar_url', message: 'Unable to download avatar from URL. Possible API issue.'});
-    })
-    .on('response', (response) => {
-        console.log('Downloading file ' + url + ' to path: ' + filePath);
-        console.log('Received repsonse code: ' + response.statusCode);
-    })
-    .on('end',  () => { 
-        console.log('Download completed.');
-    })
-    .pipe(fs.createWriteStream(filePath), (err) => {
-        if(err) cb({ error: 'invalid_local_filepath', message: 'File Path does not exist.'});
-    }); 
+        if(processed === contributors.length) {
+            console.log('finished starred stack.');
+            console.log(starredStack);
+            cb(null, starredStack);
+        }
+    });
 }
